@@ -69,10 +69,10 @@ export interface Workflow {
 }
 
 export const GRADE_COLORS = {
-  A: 'text-emerald-400 bg-emerald-400/10 border-emerald-400/30',
-  B: 'text-blue-400 bg-blue-400/10 border-blue-400/30',
-  C: 'text-amber-400 bg-amber-400/10 border-amber-400/30',
-  D: 'text-red-400 bg-red-400/10 border-red-400/30',
+  A: 'text-emerald-700 bg-emerald-100 border-emerald-200',
+  B: 'text-blue-700 bg-blue-100 border-blue-200',
+  C: 'text-amber-700 bg-amber-100 border-amber-200',
+  D: 'text-red-700 bg-red-100 border-red-200',
 }
 
 export const STAGE_LABELS: Record<Workflow['stage'], string> = {

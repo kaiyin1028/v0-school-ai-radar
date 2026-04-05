@@ -33,10 +33,10 @@ export function DimensionRadarChart({ data, showLabels = true, size = 'md' }: Ra
   return (
     <ResponsiveContainer width="100%" height={heights[size]}>
       <RadarChart data={chartData} cx="50%" cy="50%" outerRadius="80%">
-        <PolarGrid stroke="hsl(var(--border))" strokeOpacity={0.5} />
+        <PolarGrid stroke="hsl(var(--border))" strokeOpacity={0.6} />
         <PolarAngleAxis
           dataKey="dimension"
-          tick={showLabels ? { fill: 'hsl(var(--muted-foreground))', fontSize: 11 } : false}
+          tick={showLabels ? { fill: 'hsl(var(--foreground))', fontSize: 11, fontWeight: 500 } : false}
         />
         <PolarRadiusAxis
           angle={90}
@@ -49,15 +49,16 @@ export function DimensionRadarChart({ data, showLabels = true, size = 'md' }: Ra
           dataKey="value"
           stroke="hsl(var(--primary))"
           fill="hsl(var(--primary))"
-          fillOpacity={0.3}
+          fillOpacity={0.25}
           strokeWidth={2}
         />
         <Tooltip
           contentStyle={{
             backgroundColor: 'hsl(var(--card))',
             border: '1px solid hsl(var(--border))',
-            borderRadius: '8px',
+            borderRadius: '12px',
             color: 'hsl(var(--foreground))',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
           }}
           formatter={(value: number) => [`${value} 分`, '評分']}
         />

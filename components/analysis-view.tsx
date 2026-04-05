@@ -8,6 +8,7 @@ import { DimensionRadarChart } from './radar-chart'
 import { GradeBadge } from './grade-badge'
 import { mockSchools } from '@/lib/mock-data'
 import { DIMENSION_LABELS, DIMENSION_DESCRIPTIONS, type School, type DimensionScores } from '@/lib/types'
+import Image from 'next/image'
 import {
   Brain,
   Zap,
@@ -17,10 +18,11 @@ import {
   CheckCircle2,
   ArrowRight,
   BarChart3,
+  Sparkles,
 } from 'lucide-react'
 
 export function AnalysisView() {
-  const [selectedSchool, setSelectedSchool] = useState<School>(mockSchools[4]) // Start with a C-grade school
+  const [selectedSchool, setSelectedSchool] = useState<School>(mockSchools[4])
 
   const getStrengths = (dimensions: DimensionScores) => {
     return Object.entries(dimensions)
@@ -56,29 +58,46 @@ export function AnalysisView() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-foreground">智能需求分析</h2>
-        <p className="mt-1 text-muted-foreground">基於 8 大維度的科學評分與深度分析</p>
+      {/* Hero Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-primary/10 via-secondary to-accent/10 p-6 shadow-sm">
+        <div className="flex items-center gap-6">
+          <div className="relative hidden h-20 w-20 overflow-hidden rounded-xl shadow-md lg:block">
+            <Image
+              src="/images/data-analysis.jpg"
+              alt="Analysis"
+              fill
+              className="object-cover"
+            />
+          </div>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <h2 className="text-xl font-bold text-foreground">智能需求分析</h2>
+            </div>
+            <p className="mt-1 text-muted-foreground">基於 8 大維度的科學評分，深度分析學校 AI 教育發展需求</p>
+          </div>
+        </div>
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="border-border/50 bg-card/50 lg:col-span-1">
-          <CardHeader>
+        <Card className="overflow-hidden border-border/50 shadow-sm lg:col-span-1">
+          <CardHeader className="bg-gradient-to-r from-secondary/50 to-transparent">
             <CardTitle className="text-lg">選擇學校</CardTitle>
+            <CardDescription>點擊查看詳細分析</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-2">
+          <CardContent className="max-h-[500px] space-y-2 overflow-y-auto p-4">
             {mockSchools.map((school) => (
               <button
                 key={school.id}
                 onClick={() => setSelectedSchool(school)}
-                className={`flex w-full items-center justify-between rounded-lg border p-3 text-left transition-colors ${
+                className={`flex w-full items-center justify-between rounded-xl border p-3 text-left transition-all ${
                   selectedSchool.id === school.id
-                    ? 'border-primary bg-primary/10'
-                    : 'border-border/50 hover:border-primary/50 hover:bg-muted/30'
+                    ? 'border-primary bg-primary/5 shadow-sm'
+                    : 'border-border/50 hover:border-primary/50 hover:bg-secondary/50'
                 }`}
               >
                 <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium text-foreground">{school.name}</p>
+                  <p className="truncate font-semibold text-foreground">{school.name}</p>
                   <p className="text-xs text-muted-foreground">{school.district}</p>
                 </div>
                 <GradeBadge grade={school.maturityGrade} size="sm" />
@@ -88,8 +107,8 @@ export function AnalysisView() {
         </Card>
 
         <div className="space-y-6 lg:col-span-2">
-          <Card className="border-border/50 bg-card/50">
-            <CardHeader>
+          <Card className="overflow-hidden border-border/50 shadow-sm">
+            <CardHeader className="bg-gradient-to-r from-primary/10 to-transparent">
               <div className="flex items-start justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
@@ -103,18 +122,20 @@ export function AnalysisView() {
                 <div className="flex items-center gap-4">
                   <div className="text-right">
                     <p className="text-sm text-muted-foreground">綜合評分</p>
-                    <p className="text-3xl font-bold text-foreground">{selectedSchool.overallScore}</p>
+                    <p className="text-3xl font-bold text-primary">{selectedSchool.overallScore}</p>
                   </div>
                   <GradeBadge grade={selectedSchool.maturityGrade} size="lg" showLabel />
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="rounded-lg bg-muted/30 p-4">
+            <CardContent className="pt-4">
+              <div className="rounded-xl bg-gradient-to-r from-primary/5 to-accent/5 p-4">
                 <div className="flex items-start gap-3">
-                  <Zap className="mt-0.5 h-5 w-5 text-primary" />
+                  <div className="rounded-lg bg-primary/10 p-2">
+                    <Zap className="h-5 w-5 text-primary" />
+                  </div>
                   <div>
-                    <p className="font-medium text-foreground">AI 分析建議</p>
+                    <p className="font-semibold text-foreground">AI 分析建議</p>
                     <p className="mt-1 text-sm text-muted-foreground">
                       {getGradeRecommendation(selectedSchool.maturityGrade)}
                     </p>
@@ -125,8 +146,8 @@ export function AnalysisView() {
           </Card>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="border-border/50 bg-card/50">
-              <CardHeader>
+            <Card className="overflow-hidden border-border/50 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-secondary/50 to-transparent">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <BarChart3 className="h-5 w-5 text-primary" />
                   8 維度雷達圖
@@ -137,8 +158,8 @@ export function AnalysisView() {
               </CardContent>
             </Card>
 
-            <Card className="border-border/50 bg-card/50">
-              <CardHeader>
+            <Card className="overflow-hidden border-border/50 shadow-sm">
+              <CardHeader className="bg-gradient-to-r from-secondary/50 to-transparent">
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Target className="h-5 w-5 text-primary" />
                   維度詳細評分
@@ -148,29 +169,29 @@ export function AnalysisView() {
                 {Object.entries(selectedSchool.dimensions).map(([key, value]) => (
                   <div key={key}>
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-muted-foreground">
+                      <span className="font-medium text-foreground">
                         {DIMENSION_LABELS[key as keyof DimensionScores]}
                       </span>
                       <span
-                        className={`font-medium ${
+                        className={`font-bold ${
                           value >= 80
-                            ? 'text-emerald-400'
+                            ? 'text-emerald-600'
                             : value >= 60
-                              ? 'text-amber-400'
-                              : 'text-red-400'
+                              ? 'text-amber-600'
+                              : 'text-red-600'
                         }`}
                       >
                         {value}
                       </span>
                     </div>
-                    <div className="mt-1 h-2 overflow-hidden rounded-full bg-muted">
+                    <div className="mt-1.5 h-2.5 overflow-hidden rounded-full bg-secondary">
                       <div
-                        className={`h-full transition-all ${
+                        className={`h-full rounded-full transition-all ${
                           value >= 80
-                            ? 'bg-emerald-400'
+                            ? 'bg-emerald-500'
                             : value >= 60
-                              ? 'bg-amber-400'
-                              : 'bg-red-400'
+                              ? 'bg-amber-500'
+                              : 'bg-red-500'
                         }`}
                         style={{ width: `${value}%` }}
                       />
@@ -182,25 +203,25 @@ export function AnalysisView() {
           </div>
 
           <div className="grid gap-6 lg:grid-cols-2">
-            <Card className="border-border/50 bg-card/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <TrendingUp className="h-5 w-5 text-emerald-400" />
+            <Card className="overflow-hidden border-border/50 shadow-sm">
+              <CardHeader className="bg-emerald-50">
+                <CardTitle className="flex items-center gap-2 text-lg text-emerald-700">
+                  <TrendingUp className="h-5 w-5" />
                   優勢領域
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pt-4">
                 {strengths.length > 0 ? (
                   strengths.map(([key, value]) => (
                     <div
                       key={key}
-                      className="flex items-start gap-3 rounded-lg bg-emerald-400/5 p-3"
+                      className="flex items-start gap-3 rounded-xl bg-emerald-50 p-3"
                     >
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-400" />
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
                       <div>
-                        <p className="font-medium text-foreground">
+                        <p className="font-semibold text-foreground">
                           {DIMENSION_LABELS[key as keyof DimensionScores]}
-                          <Badge variant="secondary" className="ml-2">
+                          <Badge className="ml-2 bg-emerald-100 text-emerald-700">
                             {value}分
                           </Badge>
                         </p>
@@ -216,28 +237,25 @@ export function AnalysisView() {
               </CardContent>
             </Card>
 
-            <Card className="border-border/50 bg-card/50">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <AlertTriangle className="h-5 w-5 text-amber-400" />
+            <Card className="overflow-hidden border-border/50 shadow-sm">
+              <CardHeader className="bg-amber-50">
+                <CardTitle className="flex items-center gap-2 text-lg text-amber-700">
+                  <AlertTriangle className="h-5 w-5" />
                   待改進領域
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
+              <CardContent className="space-y-3 pt-4">
                 {weaknesses.length > 0 ? (
                   weaknesses.map(([key, value]) => (
                     <div
                       key={key}
-                      className="flex items-start gap-3 rounded-lg bg-amber-400/5 p-3"
+                      className="flex items-start gap-3 rounded-xl bg-amber-50 p-3"
                     >
-                      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-400" />
+                      <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
                       <div>
-                        <p className="font-medium text-foreground">
+                        <p className="font-semibold text-foreground">
                           {DIMENSION_LABELS[key as keyof DimensionScores]}
-                          <Badge
-                            variant="secondary"
-                            className="ml-2 bg-amber-400/10 text-amber-400"
-                          >
+                          <Badge className="ml-2 bg-amber-100 text-amber-700">
                             {value}分
                           </Badge>
                         </p>
@@ -255,8 +273,10 @@ export function AnalysisView() {
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button variant="outline">下載分析報告</Button>
-            <Button className="gap-2">
+            <Button variant="outline" className="shadow-sm">
+              下載分析報告
+            </Button>
+            <Button className="gap-2 shadow-sm">
               查看推薦方案
               <ArrowRight className="h-4 w-4" />
             </Button>

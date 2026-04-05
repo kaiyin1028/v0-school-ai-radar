@@ -15,10 +15,10 @@ interface SchoolCardProps {
 }
 
 const STATUS_STYLES = {
-  pending: 'bg-amber-400/10 text-amber-400 border-amber-400/30',
-  analyzing: 'bg-blue-400/10 text-blue-400 border-blue-400/30',
-  completed: 'bg-emerald-400/10 text-emerald-400 border-emerald-400/30',
-  error: 'bg-red-400/10 text-red-400 border-red-400/30',
+  pending: 'bg-amber-100 text-amber-700 border-amber-200',
+  analyzing: 'bg-blue-100 text-blue-700 border-blue-200',
+  completed: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  error: 'bg-red-100 text-red-700 border-red-200',
 }
 
 const STATUS_LABELS = {
@@ -31,17 +31,17 @@ const STATUS_LABELS = {
 export function SchoolCard({ school, onSelect, selected }: SchoolCardProps) {
   return (
     <Card
-      className={`border-border/50 bg-card/50 backdrop-blur-sm transition-all hover:border-primary/50 ${
-        selected ? 'border-primary ring-1 ring-primary/20' : ''
+      className={`overflow-hidden border-border/50 shadow-sm transition-all hover:shadow-md ${
+        selected ? 'border-primary ring-2 ring-primary/20' : ''
       } ${onSelect ? 'cursor-pointer' : ''}`}
       onClick={() => onSelect?.(school)}
     >
-      <CardHeader className="pb-3">
+      <CardHeader className="bg-gradient-to-r from-secondary/50 to-transparent pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
-            <h3 className="truncate font-semibold text-foreground">{school.name}</h3>
-            <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-              <span className="flex items-center gap-1">
+            <h3 className="truncate font-bold text-foreground">{school.name}</h3>
+            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5">
                 <MapPin className="h-3 w-3" />
                 {school.district}
               </span>
@@ -54,13 +54,13 @@ export function SchoolCard({ school, onSelect, selected }: SchoolCardProps) {
           <GradeBadge grade={school.maturityGrade} />
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex items-center justify-between">
+      <CardContent className="space-y-4 pt-4">
+        <div className="flex items-center justify-between rounded-xl bg-secondary/50 p-3">
           <div className="flex items-center gap-2">
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground">綜合評分</span>
+            <BarChart3 className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium text-muted-foreground">綜合評分</span>
           </div>
-          <span className="text-2xl font-bold text-foreground">{school.overallScore}</span>
+          <span className="text-2xl font-bold text-primary">{school.overallScore}</span>
         </div>
 
         <DimensionRadarChart data={school.dimensions} size="sm" showLabels={false} />
@@ -72,7 +72,7 @@ export function SchoolCard({ school, onSelect, selected }: SchoolCardProps) {
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 gap-1 text-xs"
+            className="h-8 gap-1 text-xs text-primary hover:bg-primary/10 hover:text-primary"
             onClick={(e) => {
               e.stopPropagation()
               window.open(school.website, '_blank')
