@@ -4,7 +4,7 @@ import { StatCard } from './stat-card'
 import { SchoolCard } from './school-card'
 import { GradeBadge } from './grade-badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { mockSchools, gradeDistribution, districtStats } from '@/lib/mock-data'
+import { mockSchools, gradeDistribution, districtStats } from '@/mocks'
 import { School, GraduationCap, TrendingUp, Target, ArrowRight, Sparkles, Zap } from 'lucide-react'
 import Image from 'next/image'
 import {

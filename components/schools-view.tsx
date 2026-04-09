@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { GradeBadge } from './grade-badge'
 import { DimensionRadarChart } from './radar-chart'
-import { mockSchools } from '@/lib/mock-data'
+import { mockSchools } from '@/mocks'
 import { DIMENSION_LABELS, DIMENSION_DESCRIPTIONS, type School, type DimensionScores } from '@/lib/types'
 import Image from 'next/image'
 import {

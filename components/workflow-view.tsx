@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import { mockWorkflows } from '@/lib/mock-data'
+import { mockWorkflows } from '@/mocks'
 import { STAGE_LABELS, type Workflow } from '@/lib/types'
 import Image from 'next/image'
 import {

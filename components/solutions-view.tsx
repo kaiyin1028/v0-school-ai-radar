@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
-import { mockSolutions, mockSchools } from '@/lib/mock-data'
+import { mockSolutions, mockSchools } from '@/mocks'
 import { DIMENSION_LABELS, type DimensionScores, type Solution, type School } from '@/lib/types'
 import { GradeBadge } from './grade-badge'
 import Image from 'next/image'
