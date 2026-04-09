@@ -1,6 +1,7 @@
 {
-  "name": "my-project",
-  "version": "0.1.0",
+  "name": "hk-school-ai-radar",
+  "version": "1.0.0",
+  "description": "全港學校 AI 教育需求雷達系統 - 智能分析香港學校 AI 教育需求的專業平台",
   "private": true,
   "scripts": {
     "dev": "next dev",
