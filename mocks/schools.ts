@@ -1,4 +1,11 @@
-import type { School, Solution, Workflow } from './types'
+/**
+ * Schools Mock Data
+ * 
+ * 模擬學校數據，用於開發和測試
+ * 切換到真實 API 時，此文件將不再被使用
+ */
+
+import type { School } from '@/lib/types'
 
 export const mockSchools: School[] = [
   {
@@ -179,127 +186,6 @@ export const mockSchools: School[] = [
   },
 ]
 
-export const mockSolutions: Solution[] = [
-  {
-    id: 's1',
-    name: 'AI 課程整合套件',
-    category: '課程發展',
-    description: '完整的 K-12 AI 課程體系，包含教材、教案及評估工具',
-    targetDimensions: ['curriculum', 'studentLiteracy'],
-    minGrade: 'C',
-    provider: 'EdTech Solutions HK',
-    features: ['模組化課程', '跨學科整合', '在線評估', '學習分析'],
-  },
-  {
-    id: 's2',
-    name: '教師 AI 專業發展計劃',
-    category: '師資培訓',
-    description: '分層次的教師 AI 能力培訓，從基礎到高階應用',
-    targetDimensions: ['teacherTraining', 'curriculum'],
-    minGrade: 'D',
-    provider: '香港教育大學',
-    features: ['認證課程', '工作坊', '同儕學習', '持續支援'],
-  },
-  {
-    id: 's3',
-    name: '智慧校園基礎設施方案',
-    category: '基礎建設',
-    description: '一站式 AI 基礎設施升級，包含硬件、軟件及網絡優化',
-    targetDimensions: ['infrastructure', 'governance'],
-    minGrade: 'D',
-    provider: 'Smart Campus Tech',
-    features: ['雲端平台', 'AI 工作站', '高速網絡', '安全管理'],
-  },
-  {
-    id: 's4',
-    name: 'AI 倫理與安全框架',
-    category: '管理策略',
-    description: '學校 AI 使用的倫理指引、政策模板及安全協議',
-    targetDimensions: ['ethics', 'governance'],
-    minGrade: 'C',
-    provider: 'AI Ethics Institute',
-    features: ['政策模板', '培訓教材', '審核工具', '合規檢查'],
-  },
-  {
-    id: 's5',
-    name: '產學合作平台',
-    category: '合作夥伴',
-    description: '連接學校與業界的 AI 項目合作平台',
-    targetDimensions: ['partnership', 'innovation'],
-    minGrade: 'B',
-    provider: 'InnoHub HK',
-    features: ['項目配對', '業界導師', '實習機會', '資源共享'],
-  },
-  {
-    id: 's6',
-    name: '學生 AI 創新實驗室',
-    category: '創新實踐',
-    description: '為學生提供 AI 項目開發的完整環境和指導',
-    targetDimensions: ['innovation', 'studentLiteracy'],
-    minGrade: 'B',
-    provider: 'Future Ready Labs',
-    features: ['項目孵化', '技術支援', '比賽指導', '成果展示'],
-  },
-]
-
-export const mockWorkflows: Workflow[] = [
-  {
-    id: 'w1',
-    schoolId: '6',
-    schoolName: '培正中學',
-    stage: 'analysis',
-    status: 'active',
-    createdAt: '2024-03-01',
-    updatedAt: '2024-03-10',
-    assignee: '陳老師',
-    notes: ['已完成初步評估', '待進行深度訪談'],
-  },
-  {
-    id: 'w2',
-    schoolId: '8',
-    schoolName: '新界鄉議局元朗區中學',
-    stage: 'discovery',
-    status: 'active',
-    createdAt: '2024-03-05',
-    updatedAt: '2024-03-08',
-    assignee: '李顧問',
-    notes: ['已獲取學校官網數據', '等待學校確認參與'],
-  },
-  {
-    id: 'w3',
-    schoolId: '5',
-    schoolName: '華仁書院（九龍）',
-    stage: 'recommendation',
-    status: 'active',
-    createdAt: '2024-02-15',
-    updatedAt: '2024-03-11',
-    assignee: '王經理',
-    notes: ['分析完成', '已生成方案建議', '待學校審閱'],
-  },
-  {
-    id: 'w4',
-    schoolId: '3',
-    schoolName: '英華書院',
-    stage: 'implementation',
-    status: 'active',
-    createdAt: '2024-01-20',
-    updatedAt: '2024-03-13',
-    assignee: '張顧問',
-    notes: ['方案已批准', '師資培訓進行中', '基礎設施升級計劃中'],
-  },
-  {
-    id: 'w5',
-    schoolId: '1',
-    schoolName: '聖保羅男女中學',
-    stage: 'review',
-    status: 'completed',
-    createdAt: '2023-09-01',
-    updatedAt: '2024-02-28',
-    assignee: '陳老師',
-    notes: ['所有項目已完成', '成效評估優異', '已建立持續合作關係'],
-  },
-]
-
 export const districtStats = [
   { district: '中西區', schools: 45, avgScore: 72 },
   { district: '灣仔區', schools: 38, avgScore: 68 },
@@ -327,3 +213,17 @@ export const gradeDistribution = [
   { grade: 'C', count: 245, percentage: 43 },
   { grade: 'D', count: 155, percentage: 27 },
 ]
+
+// 香港 18 區列表
+export const districts = [
+  '中西區', '灣仔區', '東區', '南區',
+  '油尖旺區', '深水埗區', '九龍城區', '黃大仙區', '觀塘區',
+  '沙田區', '大埔區', '北區', '元朗區', '屯門區',
+  '荃灣區', '葵青區', '西貢區', '離島區',
+]
+
+// 學校類型
+export const schoolTypes = ['官立', '資助', '直資', '私立', '國際'] as const
+
+// 學校級別
+export const schoolLevels = ['小學', '中學', '特殊學校'] as const
