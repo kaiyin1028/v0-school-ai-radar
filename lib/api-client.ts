@@ -2,20 +2,25 @@
  * API Client - 統一處理 API 請求
  * 
  * 功能:
- * - 統一 baseURL 管理
- * - 自動處理 headers (包含 auth token)
- * - 統一錯誤處理
- * - 請求/響應攔截
- * - 支援 Mock 模式切換
+ * - 讀取 NEXT_PUBLIC_API_BASE_URL
+ * - 提供 get/post/patch/delete (fetch wrapper)
+ * - 統一 headers (JSON、Authorization)
+ * - 統一錯誤處理 (HTTP 非 2xx 轉為標準 Error)
+ * 
+ * 注意: 此模組不處理 mock 邏輯，mock 切換在 services 層處理
  */
+
+import { getToken } from './auth-token'
 
 // ===========================================
 // 類型定義
 // ===========================================
+
+/**
+ * 統一 API 成功響應格式
+ */
 export interface ApiResponse<T> {
   data: T
-  success: boolean
-  message?: string
   meta?: {
     total?: number
     page?: number
@@ -24,120 +29,136 @@ export interface ApiResponse<T> {
   }
 }
 
-export interface ApiError {
-  code: string
-  message: string
-  status: number
-  details?: Record<string, unknown>
+/**
+ * 統一 API 錯誤響應格式
+ */
+export interface ApiErrorResponse {
+  error: {
+    code: string
+    message: string
+    details?: Record<string, unknown>
+  }
 }
 
+/**
+ * 請求配置
+ */
 export interface RequestConfig {
   headers?: Record<string, string>
   params?: Record<string, string | number | boolean | undefined>
   signal?: AbortSignal
+  skipAuth?: boolean // 跳過 Authorization header
 }
 
-export interface PaginationParams {
-  page?: number
-  pageSize?: number
-  sortBy?: string
-  sortOrder?: 'asc' | 'desc'
-}
+// ===========================================
+// API 錯誤類
+// ===========================================
 
-export interface FilterParams {
-  search?: string
-  district?: string
-  type?: string
-  grade?: string
-  status?: string
+export class ApiError extends Error {
+  public readonly code: string
+  public readonly status: number
+  public readonly details?: Record<string, unknown>
+
+  constructor(params: {
+    code: string
+    message: string
+    status: number
+    details?: Record<string, unknown>
+  }) {
+    super(params.message)
+    this.name = 'ApiError'
+    this.code = params.code
+    this.status = params.status
+    this.details = params.details
+  }
+
+  /**
+   * 從 HTTP 響應創建 ApiError
+   */
+  static async fromResponse(response: Response): Promise<ApiError> {
+    let body: unknown
+
+    try {
+      const contentType = response.headers.get('content-type')
+      if (contentType?.includes('application/json')) {
+        body = await response.json()
+      } else {
+        body = await response.text()
+      }
+    } catch {
+      body = null
+    }
+
+    // 嘗試從響應體獲取錯誤信息
+    if (body && typeof body === 'object') {
+      const errorBody = body as { error?: { code?: string; message?: string; details?: Record<string, unknown> } }
+      if (errorBody.error) {
+        return new ApiError({
+          code: errorBody.error.code || `HTTP_${response.status}`,
+          message: errorBody.error.message || response.statusText,
+          status: response.status,
+          details: errorBody.error.details,
+        })
+      }
+    }
+
+    // 默認錯誤映射
+    const defaultMessages: Record<number, string> = {
+      400: '請求參數錯誤',
+      401: '未授權，請重新登入',
+      403: '權限不足',
+      404: '資源不存在',
+      409: '資源衝突',
+      422: '數據驗證失敗',
+      429: '請求過於頻繁',
+      500: '伺服器錯誤',
+      502: '網關錯誤',
+      503: '服務暫時不可用',
+    }
+
+    return new ApiError({
+      code: `HTTP_${response.status}`,
+      message: defaultMessages[response.status] || response.statusText || '未知錯誤',
+      status: response.status,
+    })
+  }
+
+  /**
+   * 從網絡錯誤創建 ApiError
+   */
+  static fromNetworkError(error: Error): ApiError {
+    if (error.name === 'AbortError') {
+      return new ApiError({
+        code: 'REQUEST_ABORTED',
+        message: '請求已取消',
+        status: 0,
+      })
+    }
+
+    return new ApiError({
+      code: 'NETWORK_ERROR',
+      message: '網絡連接失敗，請檢查網絡設置',
+      status: 0,
+    })
+  }
 }
 
 // ===========================================
 // 環境配置
 // ===========================================
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api'
-const USE_MOCKS = process.env.NEXT_PUBLIC_USE_MOCKS === 'true'
-const REQUEST_TIMEOUT = parseInt(process.env.NEXT_PUBLIC_API_TIMEOUT || '30000')
 
-// ===========================================
-// Token 管理 (預留 Auth 注入點)
-// ===========================================
-let authToken: string | null = null
-
-export const setAuthToken = (token: string | null) => {
-  authToken = token
-}
-
-export const getAuthToken = (): string | null => {
-  // 優先使用內存中的 token
-  if (authToken) return authToken
-  
-  // 備選: 從 localStorage 讀取 (瀏覽器環境)
-  if (typeof window !== 'undefined') {
-    return localStorage.getItem('auth_token')
-  }
-  
-  return null
-}
-
-export const clearAuthToken = () => {
-  authToken = null
-  if (typeof window !== 'undefined') {
-    localStorage.removeItem('auth_token')
-  }
+const getApiBaseUrl = (): string => {
+  return process.env.NEXT_PUBLIC_API_BASE_URL || '/api'
 }
 
 // ===========================================
-// 錯誤處理
+// 工具函數
 // ===========================================
-export class ApiException extends Error {
-  public readonly code: string
-  public readonly status: number
-  public readonly details?: Record<string, unknown>
 
-  constructor(error: ApiError) {
-    super(error.message)
-    this.name = 'ApiException'
-    this.code = error.code
-    this.status = error.status
-    this.details = error.details
-  }
-
-  static fromResponse(status: number, body?: unknown): ApiException {
-    const errorMap: Record<number, { code: string; message: string }> = {
-      400: { code: 'BAD_REQUEST', message: '請求參數錯誤' },
-      401: { code: 'UNAUTHORIZED', message: '未授權，請重新登入' },
-      403: { code: 'FORBIDDEN', message: '權限不足' },
-      404: { code: 'NOT_FOUND', message: '資源不存在' },
-      409: { code: 'CONFLICT', message: '資源衝突' },
-      422: { code: 'VALIDATION_ERROR', message: '數據驗證失敗' },
-      429: { code: 'RATE_LIMITED', message: '請求過於頻繁，請稍後再試' },
-      500: { code: 'SERVER_ERROR', message: '伺服器錯誤' },
-      502: { code: 'BAD_GATEWAY', message: '網關錯誤' },
-      503: { code: 'SERVICE_UNAVAILABLE', message: '服務暫時不可用' },
-    }
-
-    const defaultError = errorMap[status] || { code: 'UNKNOWN_ERROR', message: '未知錯誤' }
-    
-    // 嘗試從響應體獲取更詳細的錯誤信息
-    if (body && typeof body === 'object') {
-      const bodyObj = body as Record<string, unknown>
-      return new ApiException({
-        code: (bodyObj.code as string) || defaultError.code,
-        message: (bodyObj.message as string) || defaultError.message,
-        status,
-        details: bodyObj.details as Record<string, unknown>,
-      })
-    }
-
-    return new ApiException({ ...defaultError, status })
-  }
-}
-
-// ===========================================
-// 請求工具函數
-// ===========================================
-const buildQueryString = (params?: Record<string, string | number | boolean | undefined>): string => {
+/**
+ * 構建 URL 查詢字符串
+ */
+function buildQueryString(params?: Record<string, string | number | boolean | undefined>): string {
   if (!params) return ''
   
   const searchParams = new URLSearchParams()
@@ -151,16 +172,28 @@ const buildQueryString = (params?: Record<string, string | number | boolean | un
   return queryString ? `?${queryString}` : ''
 }
 
-const buildHeaders = (customHeaders?: Record<string, string>): Headers => {
+/**
+ * 構建請求 Headers
+ */
+function buildHeaders(config?: RequestConfig): Headers {
   const headers = new Headers({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
-    ...customHeaders,
   })
 
-  const token = getAuthToken()
-  if (token) {
-    headers.set('Authorization', `Bearer ${token}`)
+  // 添加自定義 headers
+  if (config?.headers) {
+    Object.entries(config.headers).forEach(([key, value]) => {
+      headers.set(key, value)
+    })
+  }
+
+  // 添加 Authorization header
+  if (!config?.skipAuth) {
+    const token = getToken()
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`)
+    }
   }
 
   return headers
@@ -169,86 +202,55 @@ const buildHeaders = (customHeaders?: Record<string, string>): Headers => {
 // ===========================================
 // 核心請求方法
 // ===========================================
+
 async function request<T>(
   method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE',
   endpoint: string,
   data?: unknown,
   config?: RequestConfig
 ): Promise<ApiResponse<T>> {
-  // Mock 模式檢查
-  if (USE_MOCKS) {
-    console.log(`[API Mock] ${method} ${endpoint}`, data)
-    throw new Error('Mock mode enabled - implement mock handler')
-  }
-
-  const url = `${API_BASE_URL}${endpoint}${buildQueryString(config?.params)}`
-  const headers = buildHeaders(config?.headers)
-
-  // 創建 AbortController 用於超時控制
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
+  const baseUrl = getApiBaseUrl()
+  const url = `${baseUrl}${endpoint}${buildQueryString(config?.params)}`
+  const headers = buildHeaders(config)
 
   try {
     const response = await fetch(url, {
       method,
       headers,
       body: data ? JSON.stringify(data) : undefined,
-      signal: config?.signal || controller.signal,
+      signal: config?.signal,
     })
-
-    clearTimeout(timeoutId)
-
-    // 解析響應
-    let responseBody: unknown
-    const contentType = response.headers.get('content-type')
-    
-    if (contentType?.includes('application/json')) {
-      responseBody = await response.json()
-    } else {
-      responseBody = await response.text()
-    }
 
     // 處理錯誤響應
     if (!response.ok) {
-      throw ApiException.fromResponse(response.status, responseBody)
+      throw await ApiError.fromResponse(response)
     }
+
+    // 處理無內容響應
+    if (response.status === 204) {
+      return { data: null as T }
+    }
+
+    // 解析 JSON 響應
+    const responseBody = await response.json()
 
     // 標準化響應格式
-    if (typeof responseBody === 'object' && responseBody !== null) {
-      const body = responseBody as Record<string, unknown>
-      if ('data' in body && 'success' in body) {
-        return responseBody as ApiResponse<T>
-      }
+    if (responseBody && typeof responseBody === 'object' && 'data' in responseBody) {
+      return responseBody as ApiResponse<T>
     }
 
-    return {
-      data: responseBody as T,
-      success: true,
-    }
+    return { data: responseBody as T }
+
   } catch (error) {
-    clearTimeout(timeoutId)
-
-    if (error instanceof ApiException) {
+    if (error instanceof ApiError) {
       throw error
     }
 
     if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        throw new ApiException({
-          code: 'TIMEOUT',
-          message: '請求超時，請稍後再試',
-          status: 408,
-        })
-      }
-
-      throw new ApiException({
-        code: 'NETWORK_ERROR',
-        message: '網絡連接失敗，請檢查網絡設置',
-        status: 0,
-      })
+      throw ApiError.fromNetworkError(error)
     }
 
-    throw new ApiException({
+    throw new ApiError({
       code: 'UNKNOWN_ERROR',
       message: '發生未知錯誤',
       status: 0,
@@ -259,33 +261,46 @@ async function request<T>(
 // ===========================================
 // 導出的 API 方法
 // ===========================================
+
 export const apiClient = {
-  get: <T>(endpoint: string, config?: RequestConfig) => 
+  /**
+   * GET 請求
+   */
+  get: <T>(endpoint: string, config?: RequestConfig): Promise<ApiResponse<T>> =>
     request<T>('GET', endpoint, undefined, config),
   
-  post: <T>(endpoint: string, data?: unknown, config?: RequestConfig) => 
+  /**
+   * POST 請求
+   */
+  post: <T>(endpoint: string, data?: unknown, config?: RequestConfig): Promise<ApiResponse<T>> =>
     request<T>('POST', endpoint, data, config),
   
-  put: <T>(endpoint: string, data?: unknown, config?: RequestConfig) => 
+  /**
+   * PUT 請求
+   */
+  put: <T>(endpoint: string, data?: unknown, config?: RequestConfig): Promise<ApiResponse<T>> =>
     request<T>('PUT', endpoint, data, config),
   
-  patch: <T>(endpoint: string, data?: unknown, config?: RequestConfig) => 
+  /**
+   * PATCH 請求
+   */
+  patch: <T>(endpoint: string, data?: unknown, config?: RequestConfig): Promise<ApiResponse<T>> =>
     request<T>('PATCH', endpoint, data, config),
   
-  delete: <T>(endpoint: string, config?: RequestConfig) => 
+  /**
+   * DELETE 請求
+   */
+  delete: <T>(endpoint: string, config?: RequestConfig): Promise<ApiResponse<T>> =>
     request<T>('DELETE', endpoint, undefined, config),
 }
 
 // ===========================================
-// 環境檢查工具
+// 環境檢查
 // ===========================================
+
 export const apiConfig = {
-  baseUrl: API_BASE_URL,
-  useMocks: USE_MOCKS,
-  timeout: REQUEST_TIMEOUT,
-  
-  isMockMode: () => USE_MOCKS,
-  getBaseUrl: () => API_BASE_URL,
+  getBaseUrl: getApiBaseUrl,
+  isMockMode: (): boolean => process.env.NEXT_PUBLIC_USE_MOCKS === 'true',
 }
 
 export default apiClient

@@ -1,13 +1,15 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { GradeBadge } from './grade-badge'
 import { DimensionRadarChart } from './radar-chart'
-import { mockSchools } from '@/mocks'
+import { LoadingState, SkeletonTable, ErrorState, EmptyState } from '@/components/ui/states'
+import { schoolsService, type SchoolListParams } from '@/services'
+import { useAsync } from '@/hooks/use-async'
 import { DIMENSION_LABELS, DIMENSION_DESCRIPTIONS, type School, type DimensionScores } from '@/lib/types'
 import Image from 'next/image'
 import {
@@ -27,13 +29,44 @@ export function SchoolsView() {
   const [selectedSchool, setSelectedSchool] = useState<School | null>(null)
   const [filterGrade, setFilterGrade] = useState<string>('all')
 
-  const filteredSchools = mockSchools.filter((school) => {
-    const matchesSearch =
-      school.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      school.district.toLowerCase().includes(searchQuery.toLowerCase())
-    const matchesGrade = filterGrade === 'all' || school.maturityGrade === filterGrade
-    return matchesSearch && matchesGrade
-  })
+  // 使用 service 獲取學校列表
+  const {
+    data: schoolsData,
+    isLoading,
+    error,
+    execute: loadSchools,
+    retry,
+  } = useAsync(
+    async (params: SchoolListParams) => {
+      const response = await schoolsService.getList(params)
+      return response.data
+    }
+  )
+
+  // 初始載入和篩選變化時重新獲取數據
+  const fetchSchools = useCallback(() => {
+    const params: SchoolListParams = {
+      page: 1,
+      pageSize: 50,
+      search: searchQuery || undefined,
+      grade: filterGrade !== 'all' ? filterGrade : undefined,
+    }
+    loadSchools(params)
+  }, [searchQuery, filterGrade, loadSchools])
+
+  useEffect(() => {
+    fetchSchools()
+  }, [fetchSchools])
+
+  // 搜索防抖
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      fetchSchools()
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [searchQuery, fetchSchools])
+
+  const schools = schoolsData?.schools || []
 
   return (
     <div className="flex gap-6">
@@ -64,6 +97,7 @@ export function SchoolsView() {
           </div>
         </div>
 
+        {/* Search and Filters */}
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -89,119 +123,165 @@ export function SchoolsView() {
           </div>
         </div>
 
-        <Card className="overflow-hidden border-border/50 shadow-sm">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-border bg-secondary/30">
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
-                      學校名稱
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
-                      地區
-                    </th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
-                      類型
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">
-                      成熟度
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">
-                      評分
-                    </th>
-                    <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">
-                      狀態
-                    </th>
-                    <th className="px-4 py-3 text-right text-sm font-semibold text-foreground">
-                      操作
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredSchools.map((school, index) => (
-                    <tr
-                      key={school.id}
-                      className={`cursor-pointer border-b border-border/30 transition-colors hover:bg-secondary/50 ${
-                        selectedSchool?.id === school.id ? 'bg-primary/5' : index % 2 === 0 ? 'bg-card' : 'bg-secondary/20'
-                      }`}
-                      onClick={() => setSelectedSchool(school)}
-                    >
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2">
-                          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
-                            <Users className="h-4 w-4 text-primary" />
-                          </div>
-                          <span className="font-semibold text-foreground">{school.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-sm text-muted-foreground">
-                          <MapPin className="h-3 w-3" />
-                          {school.district}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                          <Building2 className="h-3 w-3" />
-                          {school.type} {school.level}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <div className="flex justify-center">
-                          <GradeBadge grade={school.maturityGrade} size="sm" />
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <span className="text-lg font-bold text-primary">
-                          {school.overallScore}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-center">
-                        <Badge
-                          variant="outline"
-                          className={
-                            school.status === 'completed'
-                              ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
-                              : school.status === 'analyzing'
-                                ? 'bg-blue-100 text-blue-700 border-blue-200'
-                                : 'bg-amber-100 text-amber-700 border-amber-200'
-                          }
-                        >
-                          {school.status === 'completed'
-                            ? '已完成'
-                            : school.status === 'analyzing'
-                              ? '分析中'
-                              : '待處理'}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              window.open(school.website, '_blank')
-                            }}
-                          >
-                            <ExternalLink className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary">
-                            <RefreshCw className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
+        {/* Loading State */}
+        {isLoading && (
+          <Card className="overflow-hidden border-border/50 shadow-sm">
+            <CardContent className="p-4">
+              <SkeletonTable rows={8} />
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error State */}
+        {error && !isLoading && (
+          <ErrorState
+            title="無法載入學校列表"
+            message={error.message || '請檢查網絡連接後重試'}
+            errorCode={(error as { code?: string }).code}
+            onRetry={retry}
+          />
+        )}
+
+        {/* Empty State */}
+        {!isLoading && !error && schools.length === 0 && (
+          <EmptyState
+            title="未找到學校"
+            message={searchQuery || filterGrade !== 'all' 
+              ? '沒有符合篩選條件的學校，請嘗試調整搜索條件'
+              : '目前沒有學校數據'}
+            action={{
+              label: '重新載入',
+              onClick: fetchSchools,
+            }}
+          />
+        )}
+
+        {/* Schools Table */}
+        {!isLoading && !error && schools.length > 0 && (
+          <Card className="overflow-hidden border-border/50 shadow-sm">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border bg-secondary/30">
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
+                        學校名稱
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
+                        地區
+                      </th>
+                      <th className="px-4 py-3 text-left text-sm font-semibold text-foreground">
+                        類型
+                      </th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">
+                        成熟度
+                      </th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">
+                        評分
+                      </th>
+                      <th className="px-4 py-3 text-center text-sm font-semibold text-foreground">
+                        狀態
+                      </th>
+                      <th className="px-4 py-3 text-right text-sm font-semibold text-foreground">
+                        操作
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+                  </thead>
+                  <tbody>
+                    {schools.map((school, index) => (
+                      <tr
+                        key={school.id}
+                        className={`cursor-pointer border-b border-border/30 transition-colors hover:bg-secondary/50 ${
+                          selectedSchool?.id === school.id ? 'bg-primary/5' : index % 2 === 0 ? 'bg-card' : 'bg-secondary/20'
+                        }`}
+                        onClick={() => setSelectedSchool(school)}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10">
+                              <Users className="h-4 w-4 text-primary" />
+                            </div>
+                            <span className="font-semibold text-foreground">{school.name}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="flex items-center gap-1 rounded-full bg-secondary px-2 py-0.5 text-sm text-muted-foreground">
+                            <MapPin className="h-3 w-3" />
+                            {school.district}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Building2 className="h-3 w-3" />
+                            {school.type} {school.level}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <div className="flex justify-center">
+                            <GradeBadge grade={school.maturityGrade} size="sm" />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <span className="text-lg font-bold text-primary">
+                            {school.overallScore}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-center">
+                          <Badge
+                            variant="outline"
+                            className={
+                              school.status === 'completed'
+                                ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                                : school.status === 'analyzing'
+                                  ? 'bg-blue-100 text-blue-700 border-blue-200'
+                                  : 'bg-amber-100 text-amber-700 border-amber-200'
+                            }
+                          >
+                            {school.status === 'completed'
+                              ? '已完成'
+                              : school.status === 'analyzing'
+                                ? '分析中'
+                                : '待處理'}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 hover:bg-primary/10 hover:text-primary"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                window.open(school.website, '_blank')
+                              }}
+                            >
+                              <ExternalLink className="h-4 w-4" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-primary/10 hover:text-primary">
+                              <RefreshCw className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              
+              {/* Pagination Info */}
+              {schoolsData && (
+                <div className="border-t border-border/30 bg-secondary/20 px-4 py-3">
+                  <p className="text-sm text-muted-foreground">
+                    顯示 {schools.length} / {schoolsData.total} 所學校
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
       </div>
 
+      {/* School Detail Panel */}
       {selectedSchool && (
         <Card className="w-96 shrink-0 overflow-hidden border-border/50 shadow-sm">
           <CardHeader className="flex flex-row items-start justify-between bg-gradient-to-r from-primary/10 to-transparent">

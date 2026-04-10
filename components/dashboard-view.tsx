@@ -1,10 +1,13 @@
 'use client'
 
+import { useEffect } from 'react'
 import { StatCard } from './stat-card'
 import { SchoolCard } from './school-card'
 import { GradeBadge } from './grade-badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { mockSchools, gradeDistribution, districtStats } from '@/mocks'
+import { LoadingState, SkeletonStats, SkeletonCard, ErrorState, EmptyState } from '@/components/ui/states'
+import { schoolsService, type DashboardStats } from '@/services'
+import { useAsync } from '@/hooks/use-async'
 import { School, GraduationCap, TrendingUp, Target, ArrowRight, Sparkles, Zap } from 'lucide-react'
 import Image from 'next/image'
 import {
@@ -30,8 +33,75 @@ const GRADE_COLORS_HEX = {
 const BAR_COLORS = ['#8b5cf6', '#ec4899', '#06b6d4', '#f59e0b', '#10b981', '#6366f1']
 
 export function DashboardView() {
-  const topSchools = mockSchools.slice(0, 4)
-  const topDistricts = districtStats.slice(0, 6)
+  // 使用 service 獲取數據
+  const { 
+    data: stats, 
+    isLoading, 
+    error, 
+    execute: loadStats,
+    retry 
+  } = useAsync<DashboardStats>(
+    async () => {
+      const response = await schoolsService.getDashboardStats()
+      return response.data
+    },
+    { immediate: true }
+  )
+
+  // Loading State
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        {/* Hero Skeleton */}
+        <div className="h-64 rounded-3xl bg-gradient-to-r from-violet-200 via-purple-200 to-pink-200 animate-pulse" />
+        
+        {/* Stats Skeleton */}
+        <SkeletonStats count={4} />
+        
+        {/* Charts Skeleton */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          <div className="lg:col-span-2 h-80 rounded-xl bg-muted animate-pulse" />
+          <div className="h-80 rounded-xl bg-muted animate-pulse" />
+        </div>
+        
+        {/* Schools Skeleton */}
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          {[1, 2, 3, 4].map(i => <SkeletonCard key={i} />)}
+        </div>
+      </div>
+    )
+  }
+
+  // Error State
+  if (error) {
+    return (
+      <ErrorState
+        title="無法載入儀表板數據"
+        message={error.message || '請檢查網絡連接後重試'}
+        errorCode={(error as { code?: string }).code}
+        onRetry={retry}
+      />
+    )
+  }
+
+  // Empty State
+  if (!stats) {
+    return (
+      <EmptyState
+        title="暫無數據"
+        message="目前沒有可顯示的儀表板數據"
+        action={{
+          label: '重新載入',
+          onClick: () => loadStats(),
+        }}
+      />
+    )
+  }
+
+  // Data loaded - render dashboard
+  const topSchools = stats.recentlyUpdated?.slice(0, 4) || []
+  const topDistricts = stats.districtStats?.slice(0, 6) || []
+  const gradeDistribution = stats.gradeDistribution || []
 
   return (
     <div className="space-y-6">
@@ -77,15 +147,15 @@ export function DashboardView() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <StatCard
           title="已分析學校"
-          value="570"
-          subtitle="全港學校覆蓋率 68%"
+          value={String(stats.totalSchools)}
+          subtitle={`全港學校覆蓋率 ${Math.round((stats.analyzedSchools / stats.totalSchools) * 100)}%`}
           icon={School}
           color="primary"
           trend={{ value: 12, isPositive: true }}
         />
         <StatCard
           title="平均成熟度"
-          value="58.5"
+          value={String(stats.averageScore)}
           subtitle="較去年提升 8.2 分"
           icon={TrendingUp}
           color="pink"
@@ -127,33 +197,39 @@ export function DashboardView() {
             </div>
           </CardHeader>
           <CardContent className="pt-6">
-            <ResponsiveContainer width="100%" height={280}>
-              <BarChart data={topDistricts} layout="vertical">
-                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
-                <XAxis type="number" domain={[0, 100]} stroke="#9ca3af" fontSize={12} />
-                <YAxis
-                  dataKey="district"
-                  type="category"
-                  width={70}
-                  stroke="#9ca3af"
-                  tick={{ fontSize: 12 }}
-                />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: 'none',
-                    borderRadius: '16px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-                  }}
-                  formatter={(value: number) => [`${value} 分`, '平均評分']}
-                />
-                <Bar dataKey="avgScore" radius={[0, 8, 8, 0]}>
-                  {topDistricts.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
+            {topDistricts.length > 0 ? (
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={topDistricts} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" horizontal={false} />
+                  <XAxis type="number" domain={[0, 100]} stroke="#9ca3af" fontSize={12} />
+                  <YAxis
+                    dataKey="district"
+                    type="category"
+                    width={70}
+                    stroke="#9ca3af"
+                    tick={{ fontSize: 12 }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: 'none',
+                      borderRadius: '16px',
+                      boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                    }}
+                    formatter={(value: number) => [`${value} 分`, '平均評分']}
+                  />
+                  <Bar dataKey="avgScore" radius={[0, 8, 8, 0]}>
+                    {topDistricts.map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={BAR_COLORS[index % BAR_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex h-64 items-center justify-center text-muted-foreground">
+                暫無區域數據
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -166,48 +242,56 @@ export function DashboardView() {
             <p className="text-sm text-muted-foreground">學校等級 A/B/C/D 分佈</p>
           </CardHeader>
           <CardContent className="pt-4">
-            <ResponsiveContainer width="100%" height={180}>
-              <PieChart>
-                <Pie
-                  data={gradeDistribution}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={45}
-                  outerRadius={75}
-                  dataKey="count"
-                  nameKey="grade"
-                  strokeWidth={4}
-                  stroke="white"
-                >
-                  {gradeDistribution.map((entry) => (
-                    <Cell
-                      key={entry.grade}
-                      fill={GRADE_COLORS_HEX[entry.grade as keyof typeof GRADE_COLORS_HEX]}
+            {gradeDistribution.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height={180}>
+                  <PieChart>
+                    <Pie
+                      data={gradeDistribution}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={45}
+                      outerRadius={75}
+                      dataKey="count"
+                      nameKey="grade"
+                      strokeWidth={4}
+                      stroke="white"
+                    >
+                      {gradeDistribution.map((entry) => (
+                        <Cell
+                          key={entry.grade}
+                          fill={GRADE_COLORS_HEX[entry.grade as keyof typeof GRADE_COLORS_HEX]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: 'none',
+                        borderRadius: '16px',
+                        boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+                      }}
+                      formatter={(value: number, name: string) => [`${value} 所`, `等級 ${name}`]}
                     />
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  {gradeDistribution.map((item) => (
+                    <div key={item.grade} className="flex items-center justify-between rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 p-3">
+                      <div className="flex items-center gap-2">
+                        <GradeBadge grade={item.grade as 'A' | 'B' | 'C' | 'D'} size="sm" />
+                        <span className="text-xs text-muted-foreground">{item.percentage}%</span>
+                      </div>
+                      <span className="text-sm font-bold text-foreground">{item.count}</span>
+                    </div>
                   ))}
-                </Pie>
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: 'white',
-                    border: 'none',
-                    borderRadius: '16px',
-                    boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-                  }}
-                  formatter={(value: number, name: string) => [`${value} 所`, `等級 ${name}`]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="mt-4 grid grid-cols-2 gap-3">
-              {gradeDistribution.map((item) => (
-                <div key={item.grade} className="flex items-center justify-between rounded-xl bg-gradient-to-r from-gray-50 to-gray-100 p-3">
-                  <div className="flex items-center gap-2">
-                    <GradeBadge grade={item.grade as 'A' | 'B' | 'C' | 'D'} size="sm" />
-                    <span className="text-xs text-muted-foreground">{item.percentage}%</span>
-                  </div>
-                  <span className="text-sm font-bold text-foreground">{item.count}</span>
                 </div>
-              ))}
-            </div>
+              </>
+            ) : (
+              <div className="flex h-64 items-center justify-center text-muted-foreground">
+                暫無分佈數據
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -268,11 +352,18 @@ export function DashboardView() {
             查看全部 <ArrowRight className="h-4 w-4" />
           </button>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {topSchools.map((school) => (
-            <SchoolCard key={school.id} school={school} />
-          ))}
-        </div>
+        {topSchools.length > 0 ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {topSchools.map((school) => (
+              <SchoolCard key={school.id} school={school} />
+            ))}
+          </div>
+        ) : (
+          <EmptyState
+            title="暫無學校數據"
+            message="目前沒有可顯示的學校資訊"
+          />
+        )}
       </div>
     </div>
   )
