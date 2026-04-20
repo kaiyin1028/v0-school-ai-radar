@@ -14,40 +14,26 @@ interface StatCardProps {
     value: number
     isPositive: boolean
   }
-  color?: 'primary' | 'pink' | 'cyan' | 'lime' | 'warning' | 'success'
+  color?: 'primary' | 'info' | 'warning' | 'success'
   className?: string
 }
 
 const colorStyles = {
   primary: {
-    bg: 'bg-gradient-to-br from-violet-500 to-purple-600',
-    iconBg: 'bg-violet-100',
-    iconColor: 'text-violet-600',
+    iconBg: 'bg-primary/10',
+    iconColor: 'text-primary',
   },
-  pink: {
-    bg: 'bg-gradient-to-br from-pink-500 to-rose-500',
-    iconBg: 'bg-pink-100',
-    iconColor: 'text-pink-600',
-  },
-  cyan: {
-    bg: 'bg-gradient-to-br from-cyan-500 to-teal-500',
-    iconBg: 'bg-cyan-100',
-    iconColor: 'text-cyan-600',
-  },
-  lime: {
-    bg: 'bg-gradient-to-br from-lime-500 to-green-500',
-    iconBg: 'bg-lime-100',
-    iconColor: 'text-lime-600',
+  info: {
+    iconBg: 'bg-info/10',
+    iconColor: 'text-info',
   },
   warning: {
-    bg: 'bg-gradient-to-br from-amber-500 to-orange-500',
-    iconBg: 'bg-amber-100',
-    iconColor: 'text-amber-600',
+    iconBg: 'bg-warning/10',
+    iconColor: 'text-warning',
   },
   success: {
-    bg: 'bg-gradient-to-br from-emerald-500 to-green-600',
-    iconBg: 'bg-emerald-100',
-    iconColor: 'text-emerald-600',
+    iconBg: 'bg-success/10',
+    iconColor: 'text-success',
   },
 }
 
@@ -55,24 +41,19 @@ export function StatCard({ title, value, subtitle, icon: Icon, trend, color = 'p
   const styles = colorStyles[color]
   
   return (
-    <Card className={cn('group relative overflow-hidden border-0 shadow-lg transition-all hover:-translate-y-1 hover:shadow-xl', className)}>
-      <div className={cn('absolute inset-0 opacity-90', styles.bg)} />
-      <div className="absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10 blur-xl" />
-      <div className="absolute -bottom-4 -left-4 h-20 w-20 rounded-full bg-white/10 blur-lg" />
-      <CardContent className="relative p-5">
+    <Card className={cn('border-border transition-shadow hover:shadow-md', className)}>
+      <CardContent className="p-5">
         <div className="flex items-start justify-between">
           <div className="space-y-1">
-            <p className="text-sm font-medium text-white/80">{title}</p>
-            <p className="text-3xl font-bold text-white">{value}</p>
-            {subtitle && <p className="text-xs text-white/70">{subtitle}</p>}
+            <p className="text-sm text-muted-foreground">{title}</p>
+            <p className="text-2xl font-semibold text-foreground">{value}</p>
+            {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
             {trend && (
               <div className="flex items-center gap-1.5 pt-1">
                 <span
                   className={cn(
-                    'flex items-center gap-0.5 rounded-full px-2 py-0.5 text-xs font-semibold',
-                    trend.isPositive 
-                      ? 'bg-white/20 text-white' 
-                      : 'bg-red-400/30 text-white'
+                    'flex items-center gap-0.5 text-xs font-medium',
+                    trend.isPositive ? 'text-success' : 'text-destructive'
                   )}
                 >
                   {trend.isPositive ? (
@@ -83,12 +64,12 @@ export function StatCard({ title, value, subtitle, icon: Icon, trend, color = 'p
                   {trend.isPositive ? '+' : ''}
                   {trend.value}%
                 </span>
-                <span className="text-xs text-white/70">較上月</span>
+                <span className="text-xs text-muted-foreground">較上月</span>
               </div>
             )}
           </div>
-          <div className="rounded-2xl bg-white/20 p-3 backdrop-blur-sm">
-            <Icon className="h-6 w-6 text-white" />
+          <div className={cn('rounded-lg p-2.5', styles.iconBg)}>
+            <Icon className={cn('h-5 w-5', styles.iconColor)} />
           </div>
         </div>
       </CardContent>
